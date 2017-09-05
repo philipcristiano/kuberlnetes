@@ -15,3 +15,4 @@ At the moment this supports a local instance of minikube. Basic things still nee
 
 - [ ] Support multiple contexts
 - [ ] Support running from within a Kubernetes cluster
+- [ ] Verify Kubernetes CA

@@ -27,8 +27,9 @@ load() ->
     % Load the spec
     SpecPath = Server ++ "/" ++ "swagger.json",
     SSLOptions = [{certfile, CertificatePath},
-                  {keyfile, KeyPath}],
-    HTTPOptions = [{ssl, SSLOptions}],
+                  {keyfile, KeyPath},
+                  {verify, verify_none}],
+    HTTPOptions = [{ssl_options, SSLOptions}],
     Spec = swaggerl:load(SpecPath, HTTPOptions),
 
     % Set the API and return
