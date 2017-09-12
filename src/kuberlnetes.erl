@@ -50,10 +50,11 @@ load_in_cluster() ->
 
     TokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token",
     {ok, Token} = file:read_file(TokenFile),
-    AuthHeader = {<<"Authorization">>, << <<"Bearer: ">>/binary, Token/binary >>},
 
+    AuthHeader = {<<"Authorization">>, << <<"Bearer: ">>/binary, Token/binary >>},
     DefaultHeaders = [AuthHeader],
-    HTTPOptions = [{default_headers, DefaultHeaders}],
+    SSLOptions = [{verify, verify_none}],
+    HTTPOptions = [{default_headers, DefaultHeaders}, {ssl_options, SSLOptions}],
 
     Spec = swaggerl:load(SpecPath, HTTPOptions),
 
