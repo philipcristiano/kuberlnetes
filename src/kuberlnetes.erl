@@ -10,8 +10,10 @@ load() ->
     DefaultPath = filename:join(Home, ".kube/config"),
     RelativeConfigPath = os:getenv("KUBECONFIG", DefaultPath),
     AbsConfigPath = filename:absname(RelativeConfigPath),
-    load_file(AbsConfigPath).
-
+    case filelib:is_file(AbsConfigPath) of
+        true -> load_file(AbsConfigPath);
+        false -> load_in_cluster()
+    end.
 
 load_file(Path) ->
     % Load config
@@ -34,6 +36,25 @@ load_file(Path) ->
                   {keyfile, KeyPath},
                   {verify, verify_none}],
     HTTPOptions = [{ssl_options, SSLOptions}],
+    Spec = swaggerl:load(SpecPath, HTTPOptions),
+
+    % Set the API and return
+    API = swaggerl:set_server(Spec, Server),
+    API.
+
+load_in_cluster() ->
+    Host = os:getenv("KUBERNETES_SERVICE_HOST"),
+    Port = os:getenv("KUBERNETES_SERVICE_PORT"),
+    Server = Host ++ ":" ++ Port,
+    SpecPath = Server ++ "/" ++ "swagger.json",
+
+    TokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token",
+    {ok, Token} = file:read_file(TokenFile),
+    AuthHeader = {<<"Authorization">>, << <<"Bearer: ">>/binary, Token/binary >>},
+
+    DefaultHeaders = [AuthHeader],
+    HTTPOptions = [{default_headers, DefaultHeaders}],
+
     Spec = swaggerl:load(SpecPath, HTTPOptions),
 
     % Set the API and return
