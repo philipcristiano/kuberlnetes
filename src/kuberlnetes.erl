@@ -45,7 +45,7 @@ load_file(Path) ->
 load_in_cluster() ->
     Host = os:getenv("KUBERNETES_SERVICE_HOST"),
     Port = os:getenv("KUBERNETES_SERVICE_PORT"),
-    Server = Host ++ ":" ++ Port,
+    Server = "https://" ++ Host ++ ":" ++ Port,
     SpecPath = Server ++ "/" ++ "swagger.json",
 
     TokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token",
