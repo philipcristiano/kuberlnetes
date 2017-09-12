@@ -52,7 +52,7 @@ load_in_cluster() ->
     TokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token",
     {ok, Token} = file:read_file(TokenFile),
 
-    AuthHeader = {<<"Authorization">>, << <<"Bearer: ">>/binary, Token/binary >>},
+    AuthHeader = {<<"Authorization">>, << <<"Bearer ">>/binary, Token/binary >>},
     DefaultHeaders = [AuthHeader],
     SSLOptions = [{verify, verify_none}],
     HTTPOptions = [{default_headers, DefaultHeaders}, {ssl_options, SSLOptions}],
