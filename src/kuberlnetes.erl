@@ -1,6 +1,7 @@
 -module(kuberlnetes).
 
--export([load/0]).
+-export([load/0,
+         load_file/1]).
 
 
 load() ->
@@ -9,9 +10,12 @@ load() ->
     DefaultPath = filename:join(Home, ".kube/config"),
     RelativeConfigPath = os:getenv("KUBECONFIG", DefaultPath),
     AbsConfigPath = filename:absname(RelativeConfigPath),
+    load_file(AbsConfigPath).
 
+
+load_file(Path) ->
     % Load config
-    [Config] = yamerl_constr:file(AbsConfigPath),
+    [Config] = yamerl_constr:file(Path),
 
     % Get the server
     [ClusterPL | _] = proplists:get_value("clusters", Config, []),
