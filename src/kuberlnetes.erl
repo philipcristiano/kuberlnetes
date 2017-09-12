@@ -1,7 +1,8 @@
 -module(kuberlnetes).
 
 -export([load/0,
-         load_file/1]).
+         load_file/1,
+         load_in_cluster/0]).
 
 
 load() ->
