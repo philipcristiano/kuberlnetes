@@ -6,16 +6,12 @@
 run(Command, Args, Env) ->
     % Use the Env PATH to find the executable!
     PATH = os:getenv("PATH", undefined),
-    ok = lager:debug("Finding command with PATH of ~p", [PATH]),
 
     Exec = os:find_executable(Command, PATH),
-    ok = lager:debug("Command ~p", [Exec]),
     Port = erlang:open_port({spawn_executable, Exec},
         [stream, stderr_to_stdout, binary, exit_status,
          {args, Args}, {env, Env}]),
-    ok = lager:debug("Port started, entering IO loop"),
     Status = loop(Port, []),
-    ok = lager:debug("Status ~p", [Status]),
     Status.
 
 loop(Port, Acc) ->

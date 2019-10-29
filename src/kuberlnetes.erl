@@ -1,7 +1,15 @@
 -module(kuberlnetes).
+-compile({parse_transform, lager_transform}).
 
--export([load/0]).
+-export([load/0,
+         watch/2,
+         watch/3]).
 
+watch(API, Op) ->
+    watch(API, Op, []).
+
+watch(API, Op, []) ->
+    kuberlnetes_watcher:watch(API, Op, []).
 
 load() ->
     % Figure out where to load config file
@@ -10,6 +18,7 @@ load() ->
     RelativeConfigPath = os:getenv("KUBECONFIG", DefaultPath),
     AbsConfigPath = filename:absname(RelativeConfigPath),
 
+    lager:info("Loading kubernetes config ~p~n", [AbsConfigPath]),
     % Load config
     [Config] = yamerl_constr:file(AbsConfigPath),
 
