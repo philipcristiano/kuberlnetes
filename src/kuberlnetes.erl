@@ -2,14 +2,14 @@
 -compile({parse_transform, lager_transform}).
 
 -export([load/0,
-         watch/2,
-         watch/3]).
+         watch/3,
+         watch/4]).
 
-watch(API, Op) ->
-    watch(API, Op, []).
+watch(Callback, API, Op) ->
+    watch(Callback, API, Op, []).
 
-watch(API, Op, []) ->
-    kuberlnetes_watcher:watch(API, Op, []).
+watch(Callback, API, Op, []) ->
+    kuberlnetes_watcher:watch(Callback, API, Op, []).
 
 load() ->
     % Figure out where to load config file

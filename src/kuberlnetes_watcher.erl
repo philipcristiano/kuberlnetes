@@ -1,24 +1,29 @@
 -module(kuberlnetes_watcher).
 
--export([watch/3]).
+-export([watch/4]).
 
-watch(API, {ListOp, WatchOp}, []) ->
+watch(Callback, API, {ListOp, WatchOp}, []) ->
     ListResp = swaggerl:op(API, ListOp, []),
+    Items = maps:get(<<"items">>, ListResp),
+    ok = callback_items(Callback, Items),
     Metadata = maps:get(<<"metadata">>, ListResp),
     ResourceVerstion = maps:get(<<"resourceVersion">>, Metadata),
     io:format("Version ~p~n", [ResourceVerstion]),
     ParseFunc = swaggerl:async_op(API, WatchOp, []),
     io:format("Watch ~p~n", [ParseFunc]),
+    loop(Callback, ParseFunc).
 
-    loop(ParseFunc);
-watch(_API, _Op, []) ->
-    ok.
-
-loop(Func) ->
+loop(Callback, Func) ->
     Msg = receive
-        M -> io:format("Got message ~p~n", [M]),
-             M
+        M -> M
     end,
     Parsed = Func(Msg),
-    io:format("Parsed ~p~n", [Parsed]),
-    loop(Func).
+    Callback({loop, Parsed}),
+
+    loop(Callback, Func).
+
+callback_items(_Callback, []) ->
+    ok;
+callback_items(Callback, [H|T]) ->
+    Callback({list, H}),
+    callback_items(Callback, T).
