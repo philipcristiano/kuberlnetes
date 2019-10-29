@@ -7,8 +7,18 @@ watch(API, {ListOp, WatchOp}, []) ->
     Metadata = maps:get(<<"metadata">>, ListResp),
     ResourceVerstion = maps:get(<<"resourceVersion">>, Metadata),
     io:format("Version ~p~n", [ResourceVerstion]),
-    WatchResp = swaggerl:op(API, WatchOp, [{<<"timeoutSeconds">>, 30}]),
-    io:format("Watch ~p~n", [WatchResp]),
-    ok;
+    ParseFunc = swaggerl:async_op(API, WatchOp, []),
+    io:format("Watch ~p~n", [ParseFunc]),
+
+    loop(ParseFunc);
 watch(_API, _Op, []) ->
     ok.
+
+loop(Func) ->
+    Msg = receive
+        M -> io:format("Got message ~p~n", [M]),
+             M
+    end,
+    Parsed = Func(Msg),
+    io:format("Parsed ~p~n", [Parsed]),
+    loop(Func).
