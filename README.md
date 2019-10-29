@@ -9,6 +9,16 @@ API = kuberlnetes:load().
 swaggerl:op(API, "listCoreV1Namespace", []).
 ```
 
+
+### Watching resources
+
+`kuberlnetes:watch/4`
+
+* `callback` - fun/1 ({Type, Object})
+* Loaded API Config
+* {ListOp, WatchOp} as returned by `swaggerl:op`
+* `[]` - I guess this should be removed :/
+
 ## TODO
 
 At the moment this supports a local instance of minikube. Basic things still need to be done
