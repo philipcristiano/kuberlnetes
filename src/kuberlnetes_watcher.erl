@@ -11,7 +11,6 @@ watch(Callback, API, Op, []) ->
 
     WatchParams = [{<<"resourceVersion">>, ResourceVersion},
                    {<<"watch">>, <<"true">>}],
-    io:format("Params ~p~n", [WatchParams]),
     ParseFunc = swaggerl:async_op(API, Op, WatchParams),
     loop(Callback, ParseFunc).
 
