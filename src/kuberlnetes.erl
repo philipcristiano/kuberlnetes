@@ -2,6 +2,7 @@
 -compile({parse_transform, lager_transform}).
 
 -export([load/0,
+         spawn_watch/4,
          watch/3,
          watch/4]).
 
@@ -10,6 +11,9 @@ watch(Callback, API, Op) ->
 
 watch(Callback, API, Op, []) ->
     kuberlnetes_watcher:watch(Callback, API, Op, []).
+
+spawn_watch(Callback, API, Op, []) ->
+    erlang:spawn_link(kuberlnetes_watcher, watch, [Callback, API, Op, []]).
 
 load() ->
     % Figure out where to load config file
