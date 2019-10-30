@@ -2,15 +2,17 @@
 
 -export([watch/4]).
 
-watch(Callback, API, {ListOp, WatchOp}, []) ->
-    ListResp = swaggerl:op(API, ListOp, []),
+watch(Callback, API, Op, []) ->
+    ListResp = swaggerl:op(API, Op, []),
     Items = maps:get(<<"items">>, ListResp),
     ok = callback_items(Callback, Items),
     Metadata = maps:get(<<"metadata">>, ListResp),
-    ResourceVerstion = maps:get(<<"resourceVersion">>, Metadata),
-    io:format("Version ~p~n", [ResourceVerstion]),
-    ParseFunc = swaggerl:async_op(API, WatchOp, []),
-    io:format("Watch ~p~n", [ParseFunc]),
+    ResourceVersion = maps:get(<<"resourceVersion">>, Metadata),
+
+    WatchParams = [{<<"resourceversion">>, ResourceVersion},
+                   {<<"watch">>, <<"true">>}],
+    io:format("Params ~p~n", [WatchParams]),
+    ParseFunc = swaggerl:async_op(API, Op, WatchParams),
     loop(Callback, ParseFunc).
 
 loop(Callback, Func) ->
@@ -18,21 +20,17 @@ loop(Callback, Func) ->
         M -> M
     end,
     Parsed = Func(Msg),
-    callback_message(Callback, Parsed),
+    case Parsed of
+        ok -> ok;
+        Obj -> Items = maps:get(<<"items">>, Obj),
+               callback_items(Callback, Items)
+    end,
 
     loop(Callback, Func).
 
-callback_message(_Callback, ok) ->
-    % Not sure where this ok is coming from
-    % TODO: investigate why this is needed
-    ok;
-callback_message(Callback, Msg) ->
-    Object = maps:get(<<"object">>, Msg),
-    Type = maps:get(<<"type">>, Msg),
-    Callback({Type, Object}),
-    ok.
-
 callback_items(_Callback, []) ->
+    ok;
+callback_items(_Callback, ok) ->
     ok;
 callback_items(Callback, [H|T]) ->
     Callback({list, H}),
