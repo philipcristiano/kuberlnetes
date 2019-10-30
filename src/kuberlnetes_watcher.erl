@@ -9,7 +9,7 @@ watch(Callback, API, Op, []) ->
     Metadata = maps:get(<<"metadata">>, ListResp),
     ResourceVersion = maps:get(<<"resourceVersion">>, Metadata),
 
-    WatchParams = [{<<"resourceversion">>, ResourceVersion},
+    WatchParams = [{<<"resourceVersion">>, ResourceVersion},
                    {<<"watch">>, <<"true">>}],
     io:format("Params ~p~n", [WatchParams]),
     ParseFunc = swaggerl:async_op(API, Op, WatchParams),
@@ -22,11 +22,20 @@ loop(Callback, Func) ->
     Parsed = Func(Msg),
     case Parsed of
         ok -> ok;
-        Obj -> Items = maps:get(<<"items">>, Obj),
-               callback_items(Callback, Items)
+        {status, 200} -> ok;
+        done -> ok;
+        Obj -> callback_message(Callback, Obj)
     end,
 
     loop(Callback, Func).
+
+callback_message(Callback, Msg) ->
+    % Type = maps:get(<<"type">>, Msg),
+    Type = maps:get(<<"type">>, Msg),
+    Obj = maps:get(<<"object">>, Msg),
+
+    Callback({Type, Obj}),
+    ok.
 
 callback_items(_Callback, []) ->
     ok;
