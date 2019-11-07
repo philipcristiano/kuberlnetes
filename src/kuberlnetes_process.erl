@@ -4,7 +4,7 @@
 
 run(Command, Args, Env) ->
     % Use the Env PATH to find the executable!
-    PATH = os:getenv("PATH", undefined),
+    PATH = os:getenv("PATH", "/bin:/usr/bin"),
 
     Exec = os:find_executable(Command, PATH),
     Port = erlang:open_port({spawn_executable, Exec},
