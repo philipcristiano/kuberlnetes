@@ -5,6 +5,8 @@
          watch/3,
          watch/4]).
 
+-define(TOKEN_PATH, "/var/run/secrets/kubernetes.io/serviceaccount/token").
+
 watch(Callback, API, Op) ->
     watch(Callback, API, Op, []).
 
@@ -15,6 +17,28 @@ spawn_watch(Callback, API, Op, []) ->
     erlang:spawn_link(kuberlnetes_watcher, watch, [Callback, API, Op, []]).
 
 load() ->
+    InCluster = filelib:is_file(?TOKEN_PATH),
+    case InCluster of
+        true -> load_in_cluster();
+        false -> load_kubeconfig()
+    end.
+
+load_in_cluster() ->
+    {ok, Token} = file:read_file(?TOKEN_PATH),
+    CAFILE = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+    AuthHeaders = [
+      {<<"Authorization">>, << <<"Bearer ">>/binary, Token/binary >>}],
+    SSLOpts = [{ssl_options, [{cacertfile, CAFILE}]}],
+    HeaderOption = [{default_headers, AuthHeaders}],
+    Options = SSLOpts ++ HeaderOption,
+
+    Server = "https://kubernetes.default.svc",
+    SpecPath = Server ++ "/openapi/v2",
+    Spec = swaggerl:load(SpecPath, Options),
+    API = swaggerl:set_server(Spec, Server),
+    API.
+
+load_kubeconfig() ->
     % Figure out where to load config file
     {ok, [[Home]]} = init:get_argument(home),
     DefaultPath = filename:join(Home, ".kube/config"),
