@@ -1,4 +1,5 @@
 -module(kuberlnetes).
+-include_lib("kernel/include/logger.hrl").
 
 -export([load/0,
          spawn_watch/4,
@@ -24,6 +25,7 @@ load() ->
     end.
 
 load_in_cluster() ->
+    ?LOG_DEBUG(#{msg => "Attempting in cluster kubernetes configuration"}),
     {ok, Token} = file:read_file(?TOKEN_PATH),
     CAFILE = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
     AuthHeaders = [
@@ -39,6 +41,7 @@ load_in_cluster() ->
     API.
 
 load_kubeconfig() ->
+    ?LOG_DEBUG(#{msg => "Attempting kubeconfig kubernetes configuration"}),
     % Figure out where to load config file
     {ok, [[Home]]} = init:get_argument(home),
     DefaultPath = filename:join(Home, ".kube/config"),
