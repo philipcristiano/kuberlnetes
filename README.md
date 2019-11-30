@@ -2,6 +2,12 @@
 
 An API library for Kubernetes wrapping the authentication setup. The [Swaggerl](https://github.com/philipcristiano/swaggerl) library must be used to interact with Kubernetes.
 
+
+## Authentication
+
+* In-cluster configuration
+* Kubeconfig with exec, tested with Digital Ocean
+
 ## Example
 
 ```
