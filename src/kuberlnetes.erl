@@ -1,9 +1,13 @@
 -module(kuberlnetes).
+-include_lib("kernel/include/logger.hrl").
 
 -export([load/0,
+         load/1,
          spawn_watch/4,
          watch/3,
          watch/4]).
+
+-define(TOKEN_PATH, "/var/run/secrets/kubernetes.io/serviceaccount/token").
 
 watch(Callback, API, Op) ->
     watch(Callback, API, Op, []).
@@ -15,6 +19,32 @@ spawn_watch(Callback, API, Op, []) ->
     erlang:spawn_link(kuberlnetes_watcher, watch, [Callback, API, Op, []]).
 
 load() ->
+    load([]).
+load(Options) ->
+    InCluster = filelib:is_file(?TOKEN_PATH),
+    case InCluster of
+        true -> load_in_cluster(Options);
+        false -> load_kubeconfig(Options)
+    end.
+
+load_in_cluster(Options) ->
+    ?LOG_DEBUG(#{msg => "Attempting in cluster kubernetes configuration"}),
+    {ok, Token} = file:read_file(?TOKEN_PATH),
+    CAFILE = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+    AuthHeaders = [
+      {<<"Authorization">>, << <<"Bearer ">>/binary, Token/binary >>}],
+    SSLOpts = [{ssl_options, [{cacertfile, CAFILE}]}],
+    HeaderOption = [{default_headers, AuthHeaders}],
+    AllOptions = SSLOpts ++ HeaderOption ++ Options,
+
+    Server = "https://kubernetes.default.svc",
+    SpecPath = Server ++ "/openapi/v2",
+    Spec = swaggerl:load(SpecPath, AllOptions),
+    API = swaggerl:set_server(Spec, Server),
+    API.
+
+load_kubeconfig(Options) ->
+    ?LOG_DEBUG(#{msg => "Attempting kubeconfig kubernetes configuration"}),
     % Figure out where to load config file
     {ok, [[Home]]} = init:get_argument(home),
     DefaultPath = filename:join(Home, ".kube/config"),
@@ -35,7 +65,7 @@ load() ->
     SpecPath = Server ++ "/openapi/v2",
     SSLOptions = [{cert, Certificate},
                   {key, Key} ],
-    HTTPOptions = [{ssl_options, SSLOptions}],
+    HTTPOptions = [{ssl_options, SSLOptions}] ++ Options,
     Spec = swaggerl:load(SpecPath, HTTPOptions),
 
     % Set the API and return
