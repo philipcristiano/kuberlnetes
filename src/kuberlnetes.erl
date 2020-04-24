@@ -31,10 +31,9 @@ load_in_cluster(Options) ->
     ?LOG_DEBUG(#{msg => "Attempting in cluster kubernetes configuration"}),
     {ok, Token} = file:read_file(?TOKEN_PATH),
     CAFILE = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
-    AuthHeaders = [
-      {<<"Authorization">>, << <<"Bearer ">>/binary, Token/binary >>}],
+    Opts = request_operations_for_token(Token),
     SSLOpts = [{ssl_options, [{cacertfile, CAFILE}]}],
-    HeaderOption = [{default_headers, AuthHeaders}],
+    HeaderOption = [{default_headers, maps:get(headers, Opts)}],
     AllOptions = SSLOpts ++ HeaderOption ++ Options,
 
     Server = "https://kubernetes.default.svc",
@@ -55,17 +54,26 @@ load_kubeconfig(Options) ->
     [Config] = yamerl_constr:file(AbsConfigPath),
 
     % Get the server
-    [ClusterPL | _] = proplists:get_value("clusters", Config, []),
+    [ClusterPL | _] = proplists:get_value("clusters", Config, [[], []]),
     Cluster = proplists:get_value("cluster", ClusterPL, []),
     Server = proplists:get_value("server", Cluster, undefined),
 
     % Get user cert/key
-    {Certificate, Key} = get_credentials(Config),
+    ReqOpts = get_credentials(Config),
     % Load the spec
+    SSLOpts = case maps:is_key(ssl_options, ReqOpts) of
+       false -> [];
+       true -> [{ssl_options, maps:get(ssl_options, ReqOpts)}]
+    end,
+
+    TokenOpts = case maps:is_key(headers, ReqOpts) of
+       false -> [];
+       true -> [{default_headers, maps:get(headers, ReqOpts)}]
+    end,
+
+    HTTPOptions = SSLOpts ++ TokenOpts ++ Options,
+
     SpecPath = Server ++ "/openapi/v2",
-    SSLOptions = [{cert, Certificate},
-                  {key, Key} ],
-    HTTPOptions = [{ssl_options, SSLOptions}] ++ Options,
     Spec = swaggerl:load(SpecPath, HTTPOptions),
 
     % Set the API and return
@@ -73,7 +81,7 @@ load_kubeconfig(Options) ->
     API.
 
 get_credentials(Config) ->
-    [UserPL | _] =  proplists:get_value("users", Config, []),
+    [UserPL | _] =  proplists:get_value("users", Config),
     User = proplists:get_value("user", UserPL, []),
     get_exec_credentials(User).
 
@@ -92,12 +100,32 @@ get_exec_credentials(User) ->
     [Config] = yamerl_constr:string(ConfigBytes),
     ConfigStatus = proplists:get_value("status", Config),
 
-    Cert = proplists:get_value("clientCertificateData", ConfigStatus),
-    {_type, DerCert} = list_to_der(Cert),
 
-    Key = proplists:get_value("clientKeyData", ConfigStatus),
+    ReqOpts = case proplists:is_defined("token", ConfigStatus) of
+        true -> Token = proplists:get_value("token", ConfigStatus),
+                request_operations_for_token(Token);
+        false -> Cert = proplists:get_value(
+                            "clientCertificateData",
+                            ConfigStatus),
+                Key = proplists:get_value("clientKeyData", ConfigStatus),
+                request_operations_for_cert(Cert, Key)
+    end,
+    ReqOpts.
+
+request_operations_for_token(Token) when is_list(Token)->
+    BToken = erlang:list_to_binary(Token),
+    request_operations_for_token(BToken);
+request_operations_for_token(Token) when is_binary(Token)->
+    Headers = [
+      {<<"Authorization">>, << <<"Bearer ">>/binary, Token/binary >>}],
+    #{headers => Headers}.
+
+request_operations_for_cert(Cert, Key) ->
+    {_type, DerCert} = list_to_der(Cert),
     DerKey = list_to_der(Key),
-    {DerCert, DerKey}.
+    SSLOptions = [{cert, DerCert},
+                  {key, DerKey} ],
+    #{ssl_options => SSLOptions}.
 
 list_to_der(L) ->
     Bin = erlang:list_to_binary(L),
