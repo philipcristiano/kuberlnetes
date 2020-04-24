@@ -58,21 +58,31 @@ load_kubeconfig(Options) ->
     Cluster = proplists:get_value("cluster", ClusterPL, []),
     Server = proplists:get_value("server", Cluster, undefined),
 
-    % Get user cert/key
-    ReqOpts = get_credentials(Config),
-    % Load the spec
-    SSLOpts = case maps:is_key(ssl_options, ReqOpts) of
-       false -> [];
-       true -> [{ssl_options, maps:get(ssl_options, ReqOpts)}]
+    CertAuthKey = "certificate-authority-data",
+    ClusterSSLOpts = case proplists:is_defined(CertAuthKey, Cluster) of
+        false -> [];
+        true -> B64 = proplists:get_value(CertAuthKey, Cluster),
+                      CACertPem = base64:decode(B64),
+                      {_T, CACertDer} = binary_to_der(CACertPem),
+                      [{cacerts, [CACertDer]}]
     end,
 
-    TokenOpts = case maps:is_key(headers, ReqOpts) of
+    % Get user cert/key/token
+    ReqOpts = get_credentials(Config),
+    HTTPSSLOpts = case maps:is_key(ssl_options, ReqOpts) of
+       false -> [{ssl_options, ClusterSSLOpts}];
+       true ->  ReqSSLOpts = maps:get(ssl_options, ReqOpts),
+                [{ssl_options, ReqSSLOpts ++ ClusterSSLOpts}]
+    end,
+
+    HTTPTokenOpts = case maps:is_key(headers, ReqOpts) of
        false -> [];
        true -> [{default_headers, maps:get(headers, ReqOpts)}]
     end,
 
-    HTTPOptions = SSLOpts ++ TokenOpts ++ Options,
+    HTTPOptions = HTTPSSLOpts ++ HTTPTokenOpts ++ Options,
 
+    % Load the spec
     SpecPath = Server ++ "/openapi/v2",
     Spec = swaggerl:load(SpecPath, HTTPOptions),
 
@@ -127,8 +137,12 @@ request_operations_for_cert(Cert, Key) ->
                   {key, DerKey} ],
     #{ssl_options => SSLOptions}.
 
-list_to_der(L) ->
+list_to_der(L) when is_list(L) ->
     Bin = erlang:list_to_binary(L),
+    Der = binary_to_der(Bin),
+    Der.
+
+binary_to_der(Bin) ->
     [PemEntry] = public_key:pem_decode(Bin),
     {Type, Der, _encrypt} = PemEntry,
     {Type, Der}.

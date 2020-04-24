@@ -3,6 +3,7 @@ PROJECT_DESCRIPTION = New project
 PROJECT_VERSION = 0.1.0
 
 BUILD_DEPS = elvis_mk
+LOCAL_DEPS = public_key
 DEPS = swaggerl yamerl
 TEST_DEPS = meck
 TEST_DIR = tests
