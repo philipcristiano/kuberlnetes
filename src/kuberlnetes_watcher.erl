@@ -23,18 +23,19 @@ loop(Callback, Func) ->
         ok -> ok;
         {status, 200} -> ok;
         done -> ok;
-        Obj -> callback_message(Callback, Obj)
+        Objects -> callback_message(Callback, Objects)
     end,
 
     loop(Callback, Func).
 
-callback_message(Callback, Msg) ->
-    % Type = maps:get(<<"type">>, Msg),
+callback_message(_Callback, []) ->
+    ok;
+callback_message(Callback, [Msg | Rest]) ->
     Type = maps:get(<<"type">>, Msg),
     Obj = maps:get(<<"object">>, Msg),
 
     Callback({Type, Obj}),
-    ok.
+    callback_message(Callback, Rest).
 
 callback_items(_Callback, []) ->
     ok;
