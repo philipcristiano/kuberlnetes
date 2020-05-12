@@ -17,7 +17,7 @@ loop(Port, Acc) ->
     receive
         {Port, {exit_status, Status}} -> {Status, Acc};
         {Port, {data, Bytes}} -> loop(Port, Acc ++ Bytes);
-        Msg -> {error, unhandled_message, Msg}
+        {Port, Msg} -> {error, unhandled_message, Msg}
     end.
 
 % output_to_var({data, {eol, Data}}) ->
